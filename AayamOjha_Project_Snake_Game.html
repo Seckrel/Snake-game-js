@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game Project</title>
+    <style>
+        *{
+            padding: 0;
+            margin: 0;
+        }
+        body{
+            background-color: black;
+        }
+        canvas{
+            background: black;
+            display: block;
+            margin: 0 auto;
+            border: 1px solid #051175;
+            box-shadow: 2px 4px 20px 10px #051175;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="snakeCanvas" width="480" height="720">
+
+    </canvas>
+    <script>
+        let canvas = document.getElementById('snakeCanvas');
+        let ctx = canvas.getContext("2d");
+        let game;
+        let snakeWidth = 10;
+        let snakeHeight = 10;
+        let snakePosition = [{x:1, y:canvas.height/2}];
+        let dy = 2;
+        let dx = 2;
+        let lastKey = "R";
+        let score = 0;
+        let bait = {x:0, y:0, status:0};
+        let popSound = new Audio("./pop.flac");
+        let gameOverSound = new Audio("./gameOver.wav");
+        document.addEventListener("keydown", KeyDownHandler, false);
+
+        function KeyDownHandler(e){
+            if( (e.key == "Right" || e.key == "ArrowRight") && lastKey != "L" )
+                lastKey = "R";
+            else if ( (e.key == "Left" || e.key == "ArrowLeft") && lastKey != "R" )
+                lastKey = "L";
+            else if ( (e.key == "Up" || e.key == "ArrowUp") && lastKey != "D" )
+                lastKey = "U";
+            else if ( (e.key == "Down" || e.key == "ArrowDown") && lastKey != "U" )
+                lastKey = "D";
+        }
+
+        function drawsnake(){
+            ctx.beginPath();
+            for(let i=0; i<=score; i++){
+                ctx.rect(snakePosition[i].x, snakePosition[i].y, snakeWidth, snakeHeight);
+                ctx.fillStyle = "#b9bff0";
+                ctx.fill();
+                ctx.closePath();
+            } 
+        }
+
+        function drawBait(){
+            if(bait.status==0){
+                bait.x = Math.floor((Math.random() * (canvas.width-snakeWidth)));
+                bait.y = Math.floor(Math.random() * (canvas.height-snakeHeight));
+                bait.status = 1;
+            }
+            ctx.beginPath();
+            ctx.rect(bait.x, bait.y, snakeWidth, snakeHeight);
+            ctx.fillStyle = "white";
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function movement(){
+            if(score!=0){
+                snakePosition.pop(); 
+                if(lastKey == "R"){
+                snakePosition.unshift({x: snakePosition[0].x + snakeWidth, y: snakePosition[0].y});
+                }else if(lastKey == "L"){
+                    snakePosition.unshift({x: snakePosition[0].x - snakeWidth, y: snakePosition[0].y});
+                }else if(lastKey == "U"){
+                    snakePosition.unshift({x: snakePosition[0].x, y: snakePosition[0].y-snakeHeight});
+                }else if(lastKey == "D"){
+                    snakePosition.unshift({x: snakePosition[0].x, y: snakePosition[0].y+snakeHeight});
+                }
+            }else{
+                if(lastKey == "R"){
+                snakePosition[0].x += snakeWidth;
+                }else if(lastKey == "L"){
+                    snakePosition[0].x -= snakeWidth;
+                }else if(lastKey == "U"){
+                    snakePosition[0].y -= snakeHeight;
+                }else if(lastKey == "D"){
+                    snakePosition[0].y += snakeHeight;
+                }
+            }
+        } 
+
+        function setCookie(cname, cvalue, exdays) {
+            var d = new Date();
+            d.setTime(d.getTime() + (exdays*24*60*60*1000));
+            var expires = "expires="+ d.toUTCString();
+            document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/"; 
+        }
+
+        function getCookie(cname) {
+            var name = cname + "=";
+            var decodedCookie = decodeURIComponent(document.cookie);
+            var ca = decodedCookie.split(';');
+            for(var i = 0; i <ca.length; i++) {
+                var c = ca[i];
+                while (c.charAt(0) == ' ') {
+                c = c.substring(1);
+                }
+                if (c.indexOf(name) == 0) {
+                return c.substring(name.length, c.length);
+                }
+            }
+            return "";
+        }
+                 
+        function gameOver(){
+            clearInterval(game);
+            gameOverSound.play();
+            let highScore = getCookie("highScore");
+            if(highScore == ""){
+                console.log("test cookie");
+                setCookie("highScore", score, 7);
+                highScore = score;
+            }
+            else if(parseInt(highScore)<score){
+                setCookie("highScore", score, 7);
+            }
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.font = "30px Arial";
+            ctx.fillStyle = "white";
+            ctx.textAlign = "center";
+            ctx.fillText("Score: "+score,canvas.width/2,canvas.height/2 - 40);
+            ctx.fillText("Last High Score: "+highScore, canvas.width/2,canvas.height/2);
+            ctx.fillText("Click To Restart", canvas.width/2, canvas.height/2 + 40);
+    
+            canvas.addEventListener('click', function(e) { 
+                document.location.reload();
+            }, false);
+        }
+
+        function collisionDect(){
+            x = snakePosition[0].x;
+            y = snakePosition[0].y;
+            check_1 = x>=bait.x && x<=bait.x+snakeWidth && y>=bait.y && y<=bait.y+snakeHeight;
+            check_2 = x+snakeWidth>=bait.x && x+snakeWidth<=bait.x+snakeWidth && y+snakeHeight>=bait.y && y+snakeHeight<=bait.y+snakeHeight;
+            if(check_1 || check_2){
+                bait.status = 0;
+                score++;
+                popSound.play();
+                ctx.clearRect(bait.x, bait.y, snakeWidth, snakeHeight);
+                if(lastKey == "R")
+                    snakePosition.unshift({x:x+snakeWidth+2, y:y});
+                else if(lastKey == "L") 
+                    snakePosition.unshift({x:x-snakeWidth+2, y:y});
+                else if(lastKey == "U")
+                    snakePosition.unshift({x:x, y:(y-snakeHeight+2)});
+                else if (lastKey == "D")
+                    snakePosition.unshift({x:x, y:y+snakeHeight+2});
+                
+                console.log(snakePosition);
+            }
+            if(x+snakeWidth>canvas.width || x<0 || y<0 || y+snakeHeight>canvas.height){
+                gameOver();
+            }
+
+            if(score>=4){
+               for(let i=1; i<score; i++)
+                    if (snakePosition[0].x == snakePosition[i].x && snakePosition[0].y == snakePosition[i].y)
+                        gameOver();
+            }
+        }
+        function drawScore(){
+            ctx.font = "12px Arial";
+            ctx.fillStyle = "white";
+            ctx.fillText("Score: " + score, 8,20);
+        }
+
+        function draw(){
+            try{
+                ctx.clearRect(0,0, canvas.width, canvas.height);
+                drawsnake();
+                drawBait();
+                movement();
+                collisionDect();
+                drawScore();
+            }catch(err){
+                throw err; 
+            }    
+        }
+        try{
+            game = setInterval(draw, 100);
+        }catch(err){
+            console.log(err);
+            alert("Unexpected error occured");
+            window.location.reload();
+        }
+    </script>
+</body>
+</html>
